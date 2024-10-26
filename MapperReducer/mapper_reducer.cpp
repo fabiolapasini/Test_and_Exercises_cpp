@@ -179,20 +179,24 @@ int main() {
   // get the absolute path where to find the input files
   std::filesystem::path directory =
       std::filesystem::current_path() / InputFiles;
+  if (!std::filesystem::exists(directory)) {
+    std::cerr << "Error: Input directory not found at: " << directory
+              << std::endl;
+    return 1;
+  }
 
   // get the absolute path where to find the intermediate files
   std::filesystem::path interFiesDir =
       std::filesystem::current_path() / IntermediateFiles;
-  // Check if the folder exists, create it if it does not
   if (!std::filesystem::exists(interFiesDir)) {
+    // Check if the folder exists, create it if it does not
     std::filesystem::create_directory(interFiesDir);
     std::cout << "Directory created: " << interFiesDir << std::endl;
   }
 
-  // get the absolute path where to find the intermediate files
+  // get the absolute path where to find the output files
   std::filesystem::path outputFiesDir =
       std::filesystem::current_path() / OutputFiles;
-  // Check if the folder exists, create it if it does not
   if (!std::filesystem::exists(outputFiesDir)) {
     std::filesystem::create_directory(outputFiesDir);
     std::cout << "Directory created: " << outputFiesDir << std::endl;
