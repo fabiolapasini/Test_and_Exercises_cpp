@@ -1,4 +1,4 @@
-# Assignment Pasini
+# Assignment
 
 ## Library
 
