@@ -1,35 +1,33 @@
-#include <chrono>
-#include <iostream>
-#include <regex>
+#include "../include/mapper_reducer.h"
 #include "../include/utils.h"
 #include "utils.cpp"
 
+#include <chrono>
+#include <iostream>
+#include <regex>
 #include <thread>
-#include <vector>
 
 
 const int N = 5;
 const int M = 4;
-const string InputFiles = "InputFiles";
-const string IntermediateFiles = "IntermediateFiles";
-const string OutputFiles = "OutputFiles";
+const std::string InputFiles = "InputFiles";
+const std::string IntermediateFiles = "IntermediateFiles";
+const std::string OutputFiles = "OutputFiles";
 
-using namespace std;
 std::mutex vectorMutex;
 
-
 // reducer function
-void ReducerFunction(std::vector<string>& fileNameVector, int indexReducer,
+void ReducerFunction(std::vector<std::string>& fileNameVector, int indexReducer,
                      std::filesystem::path outputFiesDir) {
   // shared map
   std::unordered_map<std::string, int> wordCounts;
-  std::vector<thread> threadsVect;
+  std::vector<std::thread> threadsVect;
 
   for (int i = 0; i < fileNameVector.size(); i++) {
     // each of the M reducer has to read N files, I do that in parallel
     // do not se push_back()
     threadsVect.emplace_back(countWordsFromFile, fileNameVector[i],
-                             std::ref(wordCounts));
+                             IntermediateFiles, std::ref(wordCounts));
   }
 
   // Wait for all threads to complete
@@ -55,7 +53,7 @@ void ReducerFunction(std::vector<string>& fileNameVector, int indexReducer,
 }
 
 // mapper function
-void MapperFunction(std::vector<string>& fileNameVector, int indexMapper) {
+void MapperFunction(std::vector<std::string>& fileNameVector, int indexMapper) {
   // one or more threads have to deal with more files since
   // the number of threads is less then the number of files
   while (fileNameVector.size() > 0) {
@@ -64,7 +62,7 @@ void MapperFunction(std::vector<string>& fileNameVector, int indexMapper) {
     vectorMutex.lock();
 
     std::cout << "Thread: " << indexMapper << "  got the access " << std::endl;
-    string fileName = fileNameVector.back();
+    std::string fileName = fileNameVector.back();
     fileNameVector.pop_back();
     std::cout << "Thread: " << indexMapper << "  deals with: " << fileName
               << std::endl;
@@ -73,8 +71,8 @@ void MapperFunction(std::vector<string>& fileNameVector, int indexMapper) {
 
     int index = 0;
     int temp = 0;
-    string intermediateFileName;
-    string alphanumericWord;
+    std::string intermediateFileName;
+    std::string alphanumericWord;
     std::ifstream inputFile(InputFiles + "\\" + fileName);
     std::vector<std::shared_ptr<std::ofstream>> outputFilesPointers;
     std::vector<std::string> assignedFiles;
@@ -141,10 +139,9 @@ void MapperFunction(std::vector<string>& fileNameVector, int indexMapper) {
       file->close();
     }
 
-    std::cout << "Thread: " << indexMapper << " ended" << endl;
+    std::cout << "Thread: " << indexMapper << " ended" << std::endl;
   }
 }
-
 
 int runProgram() {
   // start the timer
@@ -178,23 +175,23 @@ int runProgram() {
   }
 
   // vector of inputs files
-  std::vector<string> inputsFilesVector;
+  std::vector<std::string> inputsFilesVector;
   for (const auto& entry : std::filesystem::directory_iterator(directory)) {
     // if the file is ok and has extension .txt
     if (entry.is_regular_file() && entry.path().extension() == ".txt") {
       // read the name of the file and add them to a vector
-      string fileName = entry.path().filename().string();
+      std::string fileName = entry.path().filename().string();
       inputsFilesVector.push_back(fileName);
     }
   }
 
   // vector of threads
-  std::vector<thread> mapperThreadsVector;
+  std::vector<std::thread> mapperThreadsVector;
   for (int n = 0; n < N; n++) {
     // n reducer-thread that will create respectively N threads that read the
     // files
     mapperThreadsVector.push_back(
-        thread(MapperFunction, std::ref(inputsFilesVector), n));
+        std::thread(MapperFunction, std::ref(inputsFilesVector), n));
   }
 
   // wait until all mappers have finished
@@ -202,12 +199,12 @@ int runProgram() {
     th.join();
   }
 
-  string fileName;
+  std::string fileName;
   // vector of temp files
-  std::vector<string> temp;
+  std::vector<std::string> temp;
   std::string regexString(R"((d)\.txt$)");
   // vector of vector intermediate files
-  std::vector<std::vector<string>> filesForReducer;
+  std::vector<std::vector<std::string>> filesForReducer;
   for (int m = 0; m < M; m++) {
     /*
     I do a regex_search to divide the intermediate files.
@@ -243,10 +240,10 @@ int runProgram() {
   }
 
   // vector of reducer threads
-  std::vector<thread> reducerThreadsVector;
+  std::vector<std::thread> reducerThreadsVector;
   for (int m = 0; m < M; m++) {
     // create M reducer threads
-    reducerThreadsVector.push_back(thread(
+    reducerThreadsVector.push_back(std::thread(
         ReducerFunction, std::ref(filesForReducer[m]), m, outputFiesDir));
   }
 

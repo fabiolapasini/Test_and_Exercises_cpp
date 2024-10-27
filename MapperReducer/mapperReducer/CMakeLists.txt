@@ -4,7 +4,7 @@ add_executable (MapperReducer
 )
 
 # Specify the relative path for the input files directory
-set(INPUT_FILES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../InputFiles)
+set(INPUT_FILES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Assets/InputFiles)
 
 # Specify the output directory for the build (where executable is generated)
 set(OUTPUT_DIR $<TARGET_FILE_DIR:MapperReducer>)

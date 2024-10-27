@@ -5,9 +5,7 @@
 #include <mutex>
 #include <sstream>
 
-using namespace std;
 std::mutex mapMutex;
-
 
 // understand if a char is alphanumeric or not (to esclude commas..)
 bool isAlphanumeric(char c) {
@@ -16,13 +14,11 @@ bool isAlphanumeric(char c) {
          (c >= '0' && c <= '9');
 }
 
-
 // function that read the occurencies of words
 void countWordsFromFile(const std::string& filename,
+                        const std::string IntermediateFiles,
                         std::unordered_map<std::string, int>& wordCounts) {
-
-  string IntermediateFiles = "IntermediateFiles";
-  string path = IntermediateFiles + "\\" + filename;
+  std::string path = IntermediateFiles + "\\" + filename;
   std::ifstream file(path);
   if (file.is_open()) {
     std::string word;
@@ -32,9 +28,5 @@ void countWordsFromFile(const std::string& filename,
       ++wordCounts[word];
     }
   }
-
   file.close();
 }
-
-
-
