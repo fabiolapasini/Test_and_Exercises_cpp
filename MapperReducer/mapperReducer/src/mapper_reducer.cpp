@@ -1,18 +1,12 @@
 #include <chrono>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
-#include <mutex>
 #include <regex>
-#include <sstream>
-#include <string>
+#include "../include/utils.h"
+#include "utils.cpp"
+
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
-using namespace std;
-std::mutex vectorMutex;
-std::mutex mapMutex;
 
 const int N = 5;
 const int M = 4;
@@ -20,22 +14,9 @@ const string InputFiles = "InputFiles";
 const string IntermediateFiles = "IntermediateFiles";
 const string OutputFiles = "OutputFiles";
 
-// function that read the occurencies of words
-void countWordsFromFile(const std::string& filename,
-                        std::unordered_map<std::string, int>& wordCounts) {
-  string path = IntermediateFiles + "\\" + filename;
-  std::ifstream file(path);
-  if (file.is_open()) {
-    std::string word;
-    while (file >> word) {
-      // lock the shared map
-      std::lock_guard<std::mutex> lock(mapMutex);
-      ++wordCounts[word];
-    }
-  }
+using namespace std;
+std::mutex vectorMutex;
 
-  file.close();
-}
 
 // reducer function
 void ReducerFunction(std::vector<string>& fileNameVector, int indexReducer,
@@ -71,13 +52,6 @@ void ReducerFunction(std::vector<string>& fileNameVector, int indexReducer,
   }
 
   outputFile.close();
-}
-
-// understand if a char is alphanumeric or not (to esclude commas..)
-bool isAlphanumeric(char c) {
-  // see ascii table
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-         (c >= '0' && c <= '9');
 }
 
 // mapper function
@@ -171,7 +145,8 @@ void MapperFunction(std::vector<string>& fileNameVector, int indexMapper) {
   }
 }
 
-int main() {
+
+int runProgram() {
   // start the timer
   // std::chrono::steady_clock::time_point start =
   // std::chrono::steady_clock::now();

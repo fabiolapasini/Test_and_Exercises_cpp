@@ -33,3 +33,6 @@
 
 # Ignore tmp folder
 *tmp
+
+# exclude vs files
+*.vs

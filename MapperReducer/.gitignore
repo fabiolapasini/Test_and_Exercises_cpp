@@ -1,11 +1,1 @@
-# ignore all files
-*
-
-# do not ignore
-!mapper_reducer.cpp
-!mapper_reducer.h
-!README.md
-!.gitignore
-!InputFiles
-!InputFiles/*
-!CMakeLists.txt
+*out
