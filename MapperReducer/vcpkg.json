@@ -2,6 +2,7 @@
   "dependencies": [
     "fmt",
     "argparse",
-    "gtest"
+    "gtest",
+    "nlohmann-json"
   ]
 }
