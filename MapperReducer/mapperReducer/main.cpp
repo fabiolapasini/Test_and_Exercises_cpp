@@ -9,6 +9,18 @@
 using json = nlohmann::json;
 
 
+
+// TODO
+/*
+aggiungere un file path per leggere direttamente il percorso
+tipo assets, intermediate files etc...
+
+aggiugnere logging e mettere tutti i print li dentro
+
+aggiungere precommit, si posso fare le pipeline tipo con bamboo?
+*/
+
+
 int main() {
   std::filesystem::path config_json_file =
       std::filesystem::current_path() / "Assets" / "config.json";
@@ -46,40 +58,3 @@ int main() {
   return 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// #include <nlohmann/json.hpp>
-
-// TODO
-/*
-leggere i parametri da json e parsarli con quella libreria
-e fare delle strutture dati adeguate
-
-aggiugnere logging e mettere tutti i print li dentro
-
-aggiungere precommit, si posso fare le pipeline tipo con bamboo?
-*/
-
-//int main() {
-//  runProgram();
-//  return 0;
-//}

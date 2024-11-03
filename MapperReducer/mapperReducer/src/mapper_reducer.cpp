@@ -5,7 +5,6 @@
 
 #include "utils.cpp"
 
-
 std::mutex vectorMutex;
 
 // reducer function
@@ -33,8 +32,7 @@ void ReducerFunction(std::vector<std::string>& fileNameVector,
 
   // Create the full path for the output file
   std::filesystem::path outputFilePath = std::filesystem::current_path() /
-                                         "Assets" /
-                                         foldersInfo.OutputFiles /
+                                         "Assets" / foldersInfo.OutputFiles /
                                          outputFileName;
 
   // Write the resulting map to the output file
@@ -47,8 +45,6 @@ void ReducerFunction(std::vector<std::string>& fileNameVector,
 
   outputFile.close();
 }
-
-
 
 // mapper function
 void MapperFunction(std::vector<std::string>& fileNameVector,
@@ -72,7 +68,6 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
     int temp = 0;
     std::string intermediateFileName;
     std::string alphanumericWord;
-    /*std::ifstream inputFile(config.foldersInfo.InputFiles + "\\" + fileName);*/
     std::ifstream inputFile(std::filesystem::current_path() / "Assets" /
                             config.foldersInfo.InputFiles / fileName);
     std::vector<std::shared_ptr<std::ofstream>> outputFilesPointers;
@@ -100,15 +95,7 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
               std::filesystem::current_path() / "Assets" /
               config.foldersInfo.IntermediateFiles /
               ("mr-" + std::to_string(indexMapper) + "-" +
-                                    std::to_string(temp) + ".txt");
-          /*
-          auto current_inter_path = std::filesystem::current_path() /
-                                    "Assets" /
-                                    config.foldersInfo.IntermediateFiles;
-          std::filesystem::path intermediateFilePath =
-              current_inter_path / ("mr-" + std::to_string(indexMapper) + "-" +
-                                    std::to_string(temp) + ".txt");
-                                    */
+               std::to_string(temp) + ".txt");
           std::string intermediateFileName = intermediateFilePath.string();
 
           // verify id the intermediateFileName file is already be assigned to
@@ -155,8 +142,6 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
     std::cout << "Thread: " << indexMapper << " ended" << std::endl;
   }
 }
-
-
 
 int runProgram(Configuration config) {
   // start the timer
@@ -215,7 +200,6 @@ int runProgram(Configuration config) {
   for (auto& th : mapperThreadsVector) {
     th.join();
   }
-
 
   std::string fileName;
   // vector of temp files
