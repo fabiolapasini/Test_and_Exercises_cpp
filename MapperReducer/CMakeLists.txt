@@ -10,7 +10,7 @@ option(BUILD_TESTS "Build tests" ON)
 message(STATUS "BUILD_TESTS: ${BUILD_TESTS}")
 if(BUILD_TESTS)
     enable_testing()
-    list(APPEND VCPKG_MANIFEST_FEATURES "test")
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
 
 
@@ -19,9 +19,12 @@ project ("MapperReducer")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_subdirectory(MapperReducer)
-add_subdirectory(test)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 
+add_subdirectory(MapperReducer)
+add_subdirectory(tests)
+
+include(GNUInstallDirs)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET MapperReducer PROPERTY CXX_STANDARD 20)

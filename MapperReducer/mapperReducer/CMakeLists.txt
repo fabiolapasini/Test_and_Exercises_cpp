@@ -1,12 +1,16 @@
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(log4cxx REQUIRED)
 
 # Add source to this project's executable.
 add_executable (MapperReducer  
 "main.cpp"
 )
 
+target_link_libraries(MapperReducer PUBLIC log4cxx)
 target_link_libraries(MapperReducer PRIVATE nlohmann_json::nlohmann_json)
 set(nlohmann-json_IMPLICIT_CONVERSIONS OFF)
+
+include(GNUInstallDirs)
 
 # Specify the relative path for the input files directory
 set(INPUT_FILES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../Assets)

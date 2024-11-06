@@ -2,7 +2,18 @@
   "dependencies": [
     "fmt",
     "argparse",
-    "gtest",
-    "nlohmann-json"
-  ]
+    "nlohmann-json",
+    {
+      "name": "log4cxx",
+      "version>=": "0.12.1"
+    }
+  ],
+  "features": {
+    "tests": {
+      "description": "Builds tests",
+      "dependencies": [
+        "gtest"
+      ]
+    }
+  }
 }
