@@ -1,5 +1,14 @@
 #pragma once
 
+#include <log4cxx/asyncappender.h>
+#include <log4cxx/basicconfigurator.h>
+#include <log4cxx/consoleappender.h>
+#include <log4cxx/helpers/pool.h>
+#include <log4cxx/logmanager.h>
+#include <log4cxx/patternlayout.h>
+#include <log4cxx/propertyconfigurator.h>
+// #include <log4cxx/rollingfileappender.h>
+
 #include <string>
 #include <unordered_map>
 #include <nlohmann/json.hpp>

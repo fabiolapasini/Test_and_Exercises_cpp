@@ -6,10 +6,13 @@
 #include "utils.cpp"
 
 std::mutex vectorMutex;
+using namespace log4cxx;
+using namespace log4cxx::helpers;
 
 // reducer function
 void ReducerFunction(std::vector<std::string>& fileNameVector,
-                     FoldersInfo foldersInfo, int indexReducer) {
+                     FoldersInfo foldersInfo, int indexReducer,
+                     LoggerPtr logger) {
   // shared map
   std::unordered_map<std::string, int> wordCounts;
   std::vector<std::thread> threadsVect;
@@ -48,7 +51,7 @@ void ReducerFunction(std::vector<std::string>& fileNameVector,
 
 // mapper function
 void MapperFunction(std::vector<std::string>& fileNameVector,
-                    Configuration config, int indexMapper) {
+                    Configuration config, int indexMapper, LoggerPtr logger) {
   // one or more threads have to deal with more files since
   // the number of threads is less then the number of files
   while (fileNameVector.size() > 0) {
@@ -56,11 +59,11 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
     // pop()
     vectorMutex.lock();
 
-    std::cout << "Thread: " << indexMapper << "  got the access " << std::endl;
+    LOG4CXX_INFO(logger, "Thread: " << indexMapper << "  got the access");
     std::string fileName = fileNameVector.back();
     fileNameVector.pop_back();
-    std::cout << "Thread: " << indexMapper << "  deals with: " << fileName
-              << std::endl;
+    LOG4CXX_INFO(logger,
+                 "Thread: " << indexMapper << "  deals with: " << fileName);
 
     vectorMutex.unlock();
 
@@ -139,21 +142,20 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
       file->close();
     }
 
-    std::cout << "Thread: " << indexMapper << " ended" << std::endl;
+    LOG4CXX_INFO(logger, "Thread: " << indexMapper << " ended");
   }
 }
 
-int runProgram(Configuration config) {
+int runProgram(LoggerPtr logger, Configuration config) {
   // start the timer
-  // std::chrono::steady_clock::time_point start =
-  // std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point start =
+  std::chrono::steady_clock::now();
 
   // get the absolute path where to find the input files
   std::filesystem::path directory = std::filesystem::current_path() / "Assets" /
                                     config.foldersInfo.InputFiles;
   if (!std::filesystem::exists(directory)) {
-    std::cerr << "Error: Input directory not found at: " << directory
-              << std::endl;
+    LOG4CXX_ERROR(logger, "Error: Input directory not found at: " << directory);
     return 1;
   }
 
@@ -164,7 +166,7 @@ int runProgram(Configuration config) {
   if (!std::filesystem::exists(interFiesDir)) {
     // Check if the folder exists, create it if it does not
     std::filesystem::create_directory(interFiesDir);
-    std::cout << "Directory created: " << interFiesDir << std::endl;
+    LOG4CXX_INFO(logger, "Directory created: " << interFiesDir);
   }
 
   // get the absolute path where to find the output files
@@ -173,7 +175,7 @@ int runProgram(Configuration config) {
                                         config.foldersInfo.OutputFiles;
   if (!std::filesystem::exists(outputFiesDir)) {
     std::filesystem::create_directory(outputFiesDir);
-    std::cout << "Directory created: " << outputFiesDir << std::endl;
+    LOG4CXX_INFO(logger, "Directory created: " << outputFiesDir);
   }
 
   // vector of inputs files
@@ -192,8 +194,8 @@ int runProgram(Configuration config) {
   for (int n = 0; n < config.mapperProducerInfo.N; n++) {
     // n reducer-thread that will create respectively N threads that read the
     // files
-    mapperThreadsVector.push_back(
-        std::thread(MapperFunction, std::ref(inputsFilesVector), config, n));
+    mapperThreadsVector.push_back(std::thread(
+        MapperFunction, std::ref(inputsFilesVector), config, n, logger));
   }
 
   // wait until all mappers have finished
@@ -232,8 +234,7 @@ int runProgram(Configuration config) {
         // match the last number of the title with
         std::smatch match;
         if (std::regex_search(fileName, match, pattern)) {
-          // std::cout << "Filename: " << fileName << " , m: " << m <<
-          // std::endl;
+          LOG4CXX_INFO(logger, "Filename: " << fileName << " , m: " << m);
           temp.push_back(fileName);
         }
       }
@@ -245,8 +246,9 @@ int runProgram(Configuration config) {
   std::vector<std::thread> reducerThreadsVector;
   for (int m = 0; m < config.mapperProducerInfo.M; m++) {
     // create M reducer threads
-    reducerThreadsVector.push_back(std::thread(
-        ReducerFunction, std::ref(filesForReducer[m]), config.foldersInfo, m));
+    reducerThreadsVector.push_back(std::thread(ReducerFunction,
+                                               std::ref(filesForReducer[m]),
+                                               config.foldersInfo, m, logger));
   }
 
   // wait until all reducers have finished
@@ -254,13 +256,12 @@ int runProgram(Configuration config) {
     th.join();
   }
 
-  /*// stop the timer
+  // stop the timer
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
   // calculate the duration
   std::chrono::duration<double> duration = end - start;
-  std::cout << "Tempo trascorso: " << duration.count() << " secondi" <<
-  std::endl;*/
+  LOG4CXX_INFO(logger, "Time elapsed: " << duration.count() << " s");
 
   return 0;
 }
