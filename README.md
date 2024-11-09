@@ -11,7 +11,3 @@ This repository is organized by topic, with each folder containing specific exer
 2. Monitors: Exercises illustrating synchronization techniques using monitors to safely manage access to shared resources.
 
 3. Smart Pointers: Practical use cases for modern C++ smart pointers (such as std::shared_ptr and std::unique_ptr) that showcase efficient memory management and resource handling through RAII patterns.
-
-## Requirements
-
-This code is written in C++17 and requires a C++17 compatible compiler. It has been tested on:
