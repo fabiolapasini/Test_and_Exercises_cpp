@@ -8,40 +8,38 @@
 std::mutex mapMutex;
 
 // conversion functions for MapperProducerInfo
-void to_json(json& j, const MapperProducerInfo& mpi) {
+void to_json(json &j, const MapperProducerInfo &mpi) {
   j = json{{"N", mpi.N}, {"M", mpi.M}};
 }
 
-void from_json(const json& j, MapperProducerInfo& mpi) {
+void from_json(const json &j, MapperProducerInfo &mpi) {
   j.at("N").get_to(mpi.N);
   j.at("M").get_to(mpi.M);
 }
 
 // conversion functions for FoldersInfo
-void to_json(json& j, const FoldersInfo& fi) {
+void to_json(json &j, const FoldersInfo &fi) {
   j = json{{"InputFiles", fi.InputFiles},
            {"IntermediateFiles", fi.IntermediateFiles},
            {"OutputFiles", fi.OutputFiles}};
 }
 
-void from_json(const json& j, FoldersInfo& fi) {
+void from_json(const json &j, FoldersInfo &fi) {
   j.at("InputFiles").get_to(fi.InputFiles);
   j.at("IntermediateFiles").get_to(fi.IntermediateFiles);
   j.at("OutputFiles").get_to(fi.OutputFiles);
 }
 
 // conversion functions for Configuration
-void to_json(json& j, const Configuration& config) {
+void to_json(json &j, const Configuration &config) {
   j = json{{"MapperProducerInfo", config.mapperProducerInfo},
            {"FoldersInfo", config.foldersInfo}};
 }
 
-void from_json(const json& j, Configuration& config) {
+void from_json(const json &j, Configuration &config) {
   j.at("MapperProducerInfo").get_to(config.mapperProducerInfo);
   j.at("FoldersInfo").get_to(config.foldersInfo);
 }
-
-
 
 // understand if a char is alphanumeric or not (to esclude commas..)
 bool isAlphanumeric(char c) {
@@ -51,9 +49,9 @@ bool isAlphanumeric(char c) {
 }
 
 // function that read the occurencies of words
-void countWordsFromFile(const std::string& filename,
+void countWordsFromFile(const std::string &filename,
                         const std::string IntermediateFiles,
-                        std::unordered_map<std::string, int>& wordCounts) {
+                        std::unordered_map<std::string, int> &wordCounts) {
   std::string path = IntermediateFiles + "\\" + filename;
   std::ifstream file(path);
   if (file.is_open()) {

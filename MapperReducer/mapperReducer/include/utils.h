@@ -9,9 +9,9 @@
 #include <log4cxx/propertyconfigurator.h>
 // #include <log4cxx/rollingfileappender.h>
 
+#include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
-#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -31,25 +31,23 @@ struct Configuration {
   FoldersInfo foldersInfo;
 };
 
-
 // conversion functions for MapperProducerInfo
-void to_json(json& j, const MapperProducerInfo& mpi);
+void to_json(json &j, const MapperProducerInfo &mpi);
 
-void from_json(const json& j, MapperProducerInfo& mpi);
+void from_json(const json &j, MapperProducerInfo &mpi);
 
 // conversion functions for FoldersInfo
-void to_json(json& j, const FoldersInfo& fi);
+void to_json(json &j, const FoldersInfo &fi);
 
-void from_json(const json& j, FoldersInfo& fi);
+void from_json(const json &j, FoldersInfo &fi);
 
 // conversion functions for Configuration
-void to_json(json& j, const Configuration& config);
+void to_json(json &j, const Configuration &config);
 
-void from_json(const json& j, Configuration& config);
-
+void from_json(const json &j, Configuration &config);
 
 bool isAlphanumeric(char c);
 
-void countWordsFromFile(const std::string& filename,
+void countWordsFromFile(const std::string &filename,
                         const std::string IntermediateFiles,
-                        std::unordered_map<std::string, int>& wordCounts);
+                        std::unordered_map<std::string, int> &wordCounts);

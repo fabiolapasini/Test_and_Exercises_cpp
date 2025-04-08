@@ -1,11 +1,11 @@
 {
-    "MapperProducerInfo": {
-      "N": 5,
-      "M": 4
-    },
-    "FoldersInfo": {
-      "InputFiles": "InputFiles",
-      "IntermediateFiles": "IntermediateFiles",
-      "OutputFiles": "OutputFiles"
-    }
+  "MapperProducerInfo": {
+    "N": 5,
+    "M": 4
+  },
+  "FoldersInfo": {
+    "InputFiles": "InputFiles",
+    "IntermediateFiles": "IntermediateFiles",
+    "OutputFiles": "OutputFiles"
   }
+}

@@ -25,10 +25,7 @@ this: std::filesystem::path intermediateFilePath =
 2 [0x00005e3c] INFO MyTestLogger
 - is it possible to extend the lib?
 
-3) add precommit to check if the format is good, make the commit fails if it is
-not
-
-4) what abt pipilines? is possible to write pipelines to check the
+3) what abt pipilines? is possible to write pipelines to check the
 results of the test and the installation process.
 */
 
@@ -49,7 +46,7 @@ int main() {
   Configuration config;
   try {
     config = j.get<Configuration>();
-  } catch (const json::exception& e) {
+  } catch (const json::exception &e) {
     LOG4CXX_ERROR(logger, "Error during JSON parsing: " << e.what());
     return 1;
   }

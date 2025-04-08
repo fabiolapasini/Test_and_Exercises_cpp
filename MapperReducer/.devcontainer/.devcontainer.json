@@ -1,0 +1,33 @@
+{
+  "name": "MapReducer",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "vcpkg-binarycache",
+      "target": "/root/.cache/vcpkg/archives"
+    },
+    {
+      "type": "volume",
+      "source": "vcpkg-downloads",
+      "target": "/opt/vcpkg/downloads"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "fredericbonnet.cmake-test-adapter",
+        "twxs.cmake",
+        "microsoft.cmaketools",
+        "ms-vscode.cmake-tools",
+        "jmfirth.vsc-space-block-jumper",
+        "ms-vscode.c-cpp-pack"
+      ]
+    }
+  }
+}

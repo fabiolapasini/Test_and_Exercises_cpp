@@ -1,6 +1,6 @@
+#include "utils.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "utils.h"
 
 TEST(IsAlphanumericTest, HandlesAlphabeticCharacters) {
   EXPECT_TRUE(isAlphanumeric('A'));
@@ -21,6 +21,3 @@ TEST(IsAlphanumericTest, HandlesNonAlphanumericCharacters) {
   EXPECT_FALSE(isAlphanumeric('@'));
   EXPECT_FALSE(isAlphanumeric('\n'));
 }
-
-
-

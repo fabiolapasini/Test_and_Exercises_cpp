@@ -1,15 +1,14 @@
 ﻿#pragma once
 
-#include <vector>
-#include <string>
-#include <iostream>
 #include <filesystem>
+#include <iostream>
+#include <string>
+#include <vector>
 
 #include "utils.h"
 
-
-void ReducerFunction(std::vector<std::string>& fileNameVector,
+void ReducerFunction(std::vector<std::string> &fileNameVector,
                      FoldersInfo foldersInfo, int indexReducer);
 
-void MapperFunction(std::vector<std::string>& fileNameVector,
+void MapperFunction(std::vector<std::string> &fileNameVector,
                     Configuration config, int indexMapper);

@@ -10,7 +10,7 @@ using namespace log4cxx;
 using namespace log4cxx::helpers;
 
 // reducer function
-void ReducerFunction(std::vector<std::string>& fileNameVector,
+void ReducerFunction(std::vector<std::string> &fileNameVector,
                      FoldersInfo foldersInfo, int indexReducer,
                      LoggerPtr logger) {
   // shared map
@@ -26,7 +26,7 @@ void ReducerFunction(std::vector<std::string>& fileNameVector,
   }
 
   // Wait for all threads to complete
-  for (auto& thread : threadsVect) {
+  for (auto &thread : threadsVect) {
     thread.join();
   }
 
@@ -41,7 +41,7 @@ void ReducerFunction(std::vector<std::string>& fileNameVector,
   // Write the resulting map to the output file
   std::ofstream outputFile(outputFilePath);
   if (outputFile.is_open()) {
-    for (const auto& pair : wordCounts) {
+    for (const auto &pair : wordCounts) {
       outputFile << pair.first << ": " << pair.second << std::endl;
     }
   }
@@ -50,7 +50,7 @@ void ReducerFunction(std::vector<std::string>& fileNameVector,
 }
 
 // mapper function
-void MapperFunction(std::vector<std::string>& fileNameVector,
+void MapperFunction(std::vector<std::string> &fileNameVector,
                     Configuration config, int indexMapper, LoggerPtr logger) {
   // one or more threads have to deal with more files since
   // the number of threads is less then the number of files
@@ -110,7 +110,7 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
             int index = std::distance(assignedFiles.begin(), it);
 
             // retrieve the ofstream
-            std::shared_ptr<std::ofstream>& outputFilePtr =
+            std::shared_ptr<std::ofstream> &outputFilePtr =
                 outputFilesPointers[index];
             *outputFilePtr << alphanumericWord << std::endl;
           } else {
@@ -137,7 +137,7 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
 
     // at the close the file
     inputFile.close();
-    for (const auto& file : outputFilesPointers) {
+    for (const auto &file : outputFilesPointers) {
       // iterates on the vector of std::ofstream to close all
       file->close();
     }
@@ -149,7 +149,7 @@ void MapperFunction(std::vector<std::string>& fileNameVector,
 int runProgram(LoggerPtr logger, Configuration config) {
   // start the timer
   std::chrono::steady_clock::time_point start =
-  std::chrono::steady_clock::now();
+      std::chrono::steady_clock::now();
 
   // get the absolute path where to find the input files
   std::filesystem::path directory = std::filesystem::current_path() / "Assets" /
@@ -180,7 +180,7 @@ int runProgram(LoggerPtr logger, Configuration config) {
 
   // vector of inputs files
   std::vector<std::string> inputsFilesVector;
-  for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+  for (const auto &entry : std::filesystem::directory_iterator(directory)) {
     // if the file is ok and has extension .txt
     if (entry.is_regular_file() && entry.path().extension() == ".txt") {
       // read the name of the file and add them to a vector
@@ -199,7 +199,7 @@ int runProgram(LoggerPtr logger, Configuration config) {
   }
 
   // wait until all mappers have finished
-  for (auto& th : mapperThreadsVector) {
+  for (auto &th : mapperThreadsVector) {
     th.join();
   }
 
@@ -224,7 +224,7 @@ int runProgram(LoggerPtr logger, Configuration config) {
     // clear the temp vector
     temp.clear();
 
-    for (const auto& entry :
+    for (const auto &entry :
          std::filesystem::directory_iterator(interFiesDir)) {
       // if the file is ok and has extension .txt
       if (entry.is_regular_file() && entry.path().extension() == ".txt") {
@@ -252,7 +252,7 @@ int runProgram(LoggerPtr logger, Configuration config) {
   }
 
   // wait until all reducers have finished
-  for (auto& th : reducerThreadsVector) {
+  for (auto &th : reducerThreadsVector) {
     th.join();
   }
 
