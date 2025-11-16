@@ -19,7 +19,17 @@ The output is saved in out-X files, with each file containing unique word counts
 - Ignore punctuation (e.g., commas, periods) to count only alphanumeric characters. \
 - Choose N and M values greater than 2.
 
+## Next Work
+- Add a path.h file to centralize all used paths and avoid repeated constructions like:
+std::filesystem::current_path() / "Assets" / config.foldersInfo.IntermediateFiles
 
+- Logging: Add the logging library and include a minimal usage example.
 
-## Execution
+- Save logs to a file: Explore the logger configuration (meaning of numbers in the log, thread IDs, formats).\
+Check if the library can be extended (custom sinks, formatting, custom log levels).
+
+- Pipelines: Investigate the possibility of creating pipelines to automatically check test results. \
+Add checks for the installation process.\
+Explore tools or workflows to integrate build → test → verification in an automated way.
+
 
