@@ -2,7 +2,7 @@ find_package(GTest REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 add_library(mapper_reducer 
-"../mapperReducer/include/utils.h" 
+ 
 "../mapperReducer/src/utils.cpp"
 )
 

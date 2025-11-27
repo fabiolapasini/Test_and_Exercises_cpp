@@ -2,6 +2,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using namespace utils;
+
 TEST(IsAlphanumericTest, HandlesAlphabeticCharacters) {
   EXPECT_TRUE(isAlphanumeric('A'));
   EXPECT_TRUE(isAlphanumeric('Z'));

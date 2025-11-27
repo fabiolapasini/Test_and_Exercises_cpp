@@ -9,31 +9,11 @@ using json = nlohmann::json;
 using namespace log4cxx;
 using namespace log4cxx::helpers;
 
-// TODO
-/*
-1) add a file called path.h and store there all the used paths, avoiding doing
-this: std::filesystem::path intermediateFilePath =
-              std::filesystem::current_path() / "Assets" /
-              config.foldersInfo.IntermediateFiles /
-
-2) logging: add the library, and the simplest usage.
-=> now:
-- save the log in a file
-- read more abt the logging configuration,
- - what are the numbers printed by the logger, the names if th thread maybe.
-2 [0x00005e3c] INFO MyTestLogger
-- is it possible to extend the lib?
-
-3) what abt pipilines? is possible to write pipelines to check the
-results of the test and the installation process.
-*/
-
 int main() {
   log4cxx::BasicConfigurator::configure();
   LoggerPtr logger(Logger::getLogger("MyTestLogger"));
 
-  std::filesystem::path config_json_file =
-      std::filesystem::current_path() / "Assets" / "config.json";
+  std::filesystem::path config_json_file = path::assets_dir / "config.json";
   std::ifstream file(config_json_file);
   if (!file.is_open()) {
     LOG4CXX_ERROR(logger, "Impossible to open config.json");
@@ -42,9 +22,9 @@ int main() {
 
   json j;
   file >> j;
-  Configuration config;
+  utils::Configuration config;
   try {
-    config = j.get<Configuration>();
+    config = j.get<utils::Configuration>();
   } catch (const json::exception &e) {
     LOG4CXX_ERROR(logger, "Error during JSON parsing: " << e.what());
     return 1;

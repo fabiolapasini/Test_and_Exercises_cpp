@@ -3,15 +3,18 @@
 #include <regex>
 #include <thread>
 
+#include "../include/ThreadPool.h"
 #include "utils.cpp"
 
 std::mutex vectorMutex;
 using namespace log4cxx;
 using namespace log4cxx::helpers;
 
+//////////////////////////////////////////////////////////////////////
 // reducer function
+/////////////////////////////////////////////////////////////////////
 void ReducerFunction(std::vector<std::string> &fileNameVector,
-                     FoldersInfo foldersInfo, int indexReducer,
+                     const utils::FoldersInfo foldersInfo, int indexReducer,
                      LoggerPtr logger) {
   // shared map
   std::unordered_map<std::string, int> wordCounts;
@@ -19,9 +22,9 @@ void ReducerFunction(std::vector<std::string> &fileNameVector,
 
   for (int i = 0; i < fileNameVector.size(); i++) {
     // each of the M reducer has to read N files, I do that in parallel
-    // do not se push_back()
-    threadsVect.emplace_back(countWordsFromFile, fileNameVector[i],
-                             foldersInfo.IntermediateFiles,
+    // do not use push_back()
+    threadsVect.emplace_back(utils::countWordsFromFile, fileNameVector[i],
+                             path::intermediate_dir(foldersInfo),
                              std::ref(wordCounts));
   }
 
@@ -34,9 +37,8 @@ void ReducerFunction(std::vector<std::string> &fileNameVector,
   std::string outputFileName = "out-" + std::to_string(indexReducer) + ".txt";
 
   // Create the full path for the output file
-  std::filesystem::path outputFilePath = std::filesystem::current_path() /
-                                         "Assets" / foldersInfo.OutputFiles /
-                                         outputFileName;
+  std::filesystem::path outputFilePath =
+      path::output_dir(foldersInfo) / outputFileName;
 
   // Write the resulting map to the output file
   std::ofstream outputFile(outputFilePath);
@@ -49,9 +51,12 @@ void ReducerFunction(std::vector<std::string> &fileNameVector,
   outputFile.close();
 }
 
+//////////////////////////////////////////////////////////////////////
 // mapper function
+/////////////////////////////////////////////////////////////////////
 void MapperFunction(std::vector<std::string> &fileNameVector,
-                    Configuration config, int indexMapper, LoggerPtr logger) {
+                    const utils::Configuration config, int indexMapper,
+                    int reducers, LoggerPtr logger) {
   // one or more threads have to deal with more files since
   // the number of threads is less then the number of files
   while (fileNameVector.size() > 0) {
@@ -69,10 +74,8 @@ void MapperFunction(std::vector<std::string> &fileNameVector,
 
     int index = 0;
     int temp = 0;
-    std::string intermediateFileName;
     std::string alphanumericWord;
-    std::ifstream inputFile(std::filesystem::current_path() / "Assets" /
-                            config.foldersInfo.InputFiles / fileName);
+    std::ifstream inputFile(path::input_dir(config.foldersInfo) / fileName);
     std::vector<std::shared_ptr<std::ofstream>> outputFilesPointers;
     std::vector<std::string> assignedFiles;
     if (inputFile.is_open()) {
@@ -82,7 +85,7 @@ void MapperFunction(std::vector<std::string> &fileNameVector,
         alphanumericWord = "";
         for (char c : word) {
           // check if it is alphanumeric
-          if (isAlphanumeric(c)) {
+          if (utils::isAlphanumeric(c)) {
             // add the isAlphanumeric together to form the word
             alphanumericWord += c;
           }
@@ -92,11 +95,10 @@ void MapperFunction(std::vector<std::string> &fileNameVector,
           // I compose the file title by applying % operation to the ascii table
           // index of the first letter
           index = alphanumericWord.at(0);
-          temp = index % config.mapperProducerInfo.M;
+          temp = index % reducers;
 
           std::filesystem::path intermediateFilePath =
-              std::filesystem::current_path() / "Assets" /
-              config.foldersInfo.IntermediateFiles /
+              path::intermediate_dir(config.foldersInfo) /
               ("mr-" + std::to_string(indexMapper) + "-" +
                std::to_string(temp) + ".txt");
           std::string intermediateFileName = intermediateFilePath.string();
@@ -107,7 +109,7 @@ void MapperFunction(std::vector<std::string> &fileNameVector,
                               intermediateFileName);
           if (it != assignedFiles.end()) {
             // get the index that corrispond to intermediateFileName
-            int index = std::distance(assignedFiles.begin(), it);
+            auto index = std::distance(assignedFiles.begin(), it);
 
             // retrieve the ofstream
             std::shared_ptr<std::ofstream> &outputFilePtr =
@@ -146,120 +148,91 @@ void MapperFunction(std::vector<std::string> &fileNameVector,
   }
 }
 
-int runProgram(LoggerPtr logger, Configuration config) {
+//////////////////////////////////////////////////////////////////////
+// runner
+/////////////////////////////////////////////////////////////////////
+int runProgram(LoggerPtr logger, const utils::Configuration &config) {
   // start the timer
-  std::chrono::steady_clock::time_point start =
-      std::chrono::steady_clock::now();
+  auto start = std::chrono::steady_clock::now();
 
-  // get the absolute path where to find the input files
-  std::filesystem::path directory = std::filesystem::current_path() / "Assets" /
-                                    config.foldersInfo.InputFiles;
-  if (!std::filesystem::exists(directory)) {
-    LOG4CXX_ERROR(logger, "Error: Input directory not found at: " << directory);
+  // check and create directories if needed
+  const auto inputDir = path::input_dir(config.foldersInfo);
+  const auto interDir = path::intermediate_dir(config.foldersInfo);
+  const auto outputDir = path::output_dir(config.foldersInfo);
+
+  if (!std::filesystem::exists(inputDir)) {
+    LOG4CXX_ERROR(logger, "Error: Input directory not found at: " << inputDir);
     return 1;
   }
 
-  // get the absolute path where to find the intermediate files
-  std::filesystem::path interFiesDir = std::filesystem::current_path() /
-                                       "Assets" /
-                                       config.foldersInfo.IntermediateFiles;
-  if (!std::filesystem::exists(interFiesDir)) {
-    // Check if the folder exists, create it if it does not
-    std::filesystem::create_directory(interFiesDir);
-    LOG4CXX_INFO(logger, "Directory created: " << interFiesDir);
+  if (!std::filesystem::exists(interDir)) {
+    std::filesystem::create_directory(interDir);
+    LOG4CXX_INFO(logger, "Directory created: " << interDir);
   }
 
-  // get the absolute path where to find the output files
-  std::filesystem::path outputFiesDir = std::filesystem::current_path() /
-                                        "Assets" /
-                                        config.foldersInfo.OutputFiles;
-  if (!std::filesystem::exists(outputFiesDir)) {
-    std::filesystem::create_directory(outputFiesDir);
-    LOG4CXX_INFO(logger, "Directory created: " << outputFiesDir);
+  if (!std::filesystem::exists(outputDir)) {
+    std::filesystem::create_directory(outputDir);
+    LOG4CXX_INFO(logger, "Directory created: " << outputDir);
   }
 
-  // vector of inputs files
-  std::vector<std::string> inputsFilesVector;
-  for (const auto &entry : std::filesystem::directory_iterator(directory)) {
-    // if the file is ok and has extension .txt
+  // collect input files
+  std::vector<std::string> inputFiles;
+  for (const auto &entry : std::filesystem::directory_iterator(inputDir)) {
     if (entry.is_regular_file() && entry.path().extension() == ".txt") {
-      // read the name of the file and add them to a vector
-      std::string fileName = entry.path().filename().string();
-      inputsFilesVector.push_back(fileName);
+      inputFiles.push_back(entry.path().filename().string());
     }
   }
 
-  // vector of threads
-  std::vector<std::thread> mapperThreadsVector;
-  for (int n = 0; n < config.mapperProducerInfo.N; n++) {
-    // n reducer-thread that will create respectively N threads that read the
-    // files
-    mapperThreadsVector.push_back(std::thread(
-        MapperFunction, std::ref(inputsFilesVector), config, n, logger));
-  }
+  //// number of thread based on concurrency
+  // int mappers = std::thread::hardware_concurrency() > 0
+  //                   ? std::thread::hardware_concurrency()
+  //                   : config.mapperProducerInfo.N;
+  // int reducers = std::thread::hardware_concurrency() > 0
+  //                    ? std::thread::hardware_concurrency()
+  //                    : config.mapperProducerInfo.M;
 
-  // wait until all mappers have finished
-  for (auto &th : mapperThreadsVector) {
+  // launch mapper threads
+  std::vector<std::jthread> mapperThreads;
+  for (int n = 0; n < config.mapperProducerInfo.N; ++n) {
+    mapperThreads.emplace_back(MapperFunction, std::ref(inputFiles),
+                               std::cref(config), n,
+                               config.mapperProducerInfo.M, logger);
+  }
+  for (auto &th : mapperThreads)
     th.join();
-  }
 
-  std::string fileName;
-  // vector of temp files
-  std::vector<std::string> temp;
-  std::string regexString(R"((d)\.txt$)");
-  // vector of vector intermediate files
-  std::vector<std::vector<std::string>> filesForReducer;
-  for (int m = 0; m < config.mapperProducerInfo.M; m++) {
-    /*
-    I do a regex_search to divide the intermediate files.
-    I search for all the file names which the last number of the title id equal
-    to m (reducer index)
-    */
-    std::string currentIndexRegex = regexString;
-    // I replace (d)\.txt with (0)\.txt, (1)\.txt ...
-    currentIndexRegex.replace(currentIndexRegex.find("d"), 1,
-                              std::to_string(m));
-    std::regex pattern(currentIndexRegex);
+  // prepare intermediate files for reducers
+  std::vector<std::vector<std::string>> filesForReducer(
+      config.mapperProducerInfo.M);
+  const std::string regexTemplate = R"((d)\.txt$)";
 
-    // clear the temp vector
-    temp.clear();
+  for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
+    std::string regexStr = regexTemplate;
+    regexStr.replace(regexStr.find('d'), 1, std::to_string(m));
+    std::regex pattern(regexStr);
 
-    for (const auto &entry :
-         std::filesystem::directory_iterator(interFiesDir)) {
-      // if the file is ok and has extension .txt
+    for (const auto &entry : std::filesystem::directory_iterator(interDir)) {
       if (entry.is_regular_file() && entry.path().extension() == ".txt") {
-        // read the name of the file
-        fileName = entry.path().filename().string();
-
-        // match the last number of the title with
-        std::smatch match;
-        if (std::regex_search(fileName, match, pattern)) {
-          LOG4CXX_INFO(logger, "Filename: " << fileName << " , m: " << m);
-          temp.push_back(fileName);
+        std::string filename = entry.path().filename().string();
+        if (std::regex_search(filename, pattern)) {
+          LOG4CXX_INFO(logger, "Filename: " << filename << " , reducer: " << m);
+          filesForReducer[m].push_back(filename);
         }
       }
     }
-    filesForReducer.push_back(temp);
   }
 
-  // vector of reducer threads
-  std::vector<std::thread> reducerThreadsVector;
-  for (int m = 0; m < config.mapperProducerInfo.M; m++) {
-    // create M reducer threads
-    reducerThreadsVector.push_back(std::thread(ReducerFunction,
-                                               std::ref(filesForReducer[m]),
-                                               config.foldersInfo, m, logger));
+  // launch reducer threads
+  std::vector<std::jthread> reducerThreads;
+  for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
+    reducerThreads.emplace_back(ReducerFunction, std::ref(filesForReducer[m]),
+                                std::cref(config.foldersInfo), m, logger);
   }
-
-  // wait until all reducers have finished
-  for (auto &th : reducerThreadsVector) {
+  for (auto &th : reducerThreads)
     th.join();
-  }
 
   // stop the timer
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-  // calculate the duration
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> duration = end - start;
   LOG4CXX_INFO(logger, "Time elapsed: " << duration.count() << " s");
 

@@ -6,7 +6,7 @@ find_package(log4cxx REQUIRED)
 # Add source to this project's executable.
 add_executable (MapperReducer  
 "main.cpp"
-)
+  "src/ThreadPool.cpp")
 
 target_link_libraries(MapperReducer PUBLIC log4cxx)
 target_link_libraries(MapperReducer PRIVATE nlohmann_json::nlohmann_json)

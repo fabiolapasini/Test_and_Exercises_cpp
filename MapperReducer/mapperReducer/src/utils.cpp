@@ -7,36 +7,38 @@
 
 std::mutex mapMutex;
 
+namespace utils {
+
 // conversion functions for MapperProducerInfo
-void to_json(json &j, const MapperProducerInfo &mpi) {
+void to_json(json &j, const utils::MapperProducerInfo &mpi) {
   j = json{{"N", mpi.N}, {"M", mpi.M}};
 }
 
-void from_json(const json &j, MapperProducerInfo &mpi) {
+void from_json(const json &j, utils::MapperProducerInfo &mpi) {
   j.at("N").get_to(mpi.N);
   j.at("M").get_to(mpi.M);
 }
 
 // conversion functions for FoldersInfo
-void to_json(json &j, const FoldersInfo &fi) {
+void to_json(json &j, const utils::FoldersInfo &fi) {
   j = json{{"InputFiles", fi.InputFiles},
            {"IntermediateFiles", fi.IntermediateFiles},
            {"OutputFiles", fi.OutputFiles}};
 }
 
-void from_json(const json &j, FoldersInfo &fi) {
+void from_json(const json &j, utils::FoldersInfo &fi) {
   j.at("InputFiles").get_to(fi.InputFiles);
   j.at("IntermediateFiles").get_to(fi.IntermediateFiles);
   j.at("OutputFiles").get_to(fi.OutputFiles);
 }
 
 // conversion functions for Configuration
-void to_json(json &j, const Configuration &config) {
+void to_json(json &j, const utils::Configuration &config) {
   j = json{{"MapperProducerInfo", config.mapperProducerInfo},
            {"FoldersInfo", config.foldersInfo}};
 }
 
-void from_json(const json &j, Configuration &config) {
+void from_json(const json &j, utils::Configuration &config) {
   j.at("MapperProducerInfo").get_to(config.mapperProducerInfo);
   j.at("FoldersInfo").get_to(config.foldersInfo);
 }
@@ -50,10 +52,12 @@ bool isAlphanumeric(char c) {
 
 // function that read the occurencies of words
 void countWordsFromFile(const std::string &filename,
-                        const std::string IntermediateFiles,
+                        std::filesystem::path IntermediateFiles,
                         std::unordered_map<std::string, int> &wordCounts) {
-  std::string path = IntermediateFiles + "\\" + filename;
-  std::ifstream file(path);
+  // build the full path using filesystem
+  std::filesystem::path filePath = IntermediateFiles / filename;
+
+  std::ifstream file(filePath);
   if (file.is_open()) {
     std::string word;
     while (file >> word) {
@@ -64,3 +68,5 @@ void countWordsFromFile(const std::string &filename,
   }
   file.close();
 }
+
+} // namespace utils
