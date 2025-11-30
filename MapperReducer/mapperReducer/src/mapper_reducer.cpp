@@ -61,44 +61,6 @@ void ReducerFunction(std::vector<std::string> fileNameVector,
   LOG4CXX_INFO(logger, "Reducer " << indexReducer << " completed.");
 }
 
-/* void ReducerFunction(std::vector<std::string> &fileNameVector,
-                     const utils::FoldersInfo foldersInfo, int indexReducer,
-                     LoggerPtr logger) {
-  // shared map
-  std::unordered_map<std::string, int> wordCounts;
-  std::vector<std::thread> threadsVect;
-
-  for (int i = 0; i < fileNameVector.size(); i++) {
-    // each of the M reducer has to read N files, I do that in parallel
-    // do not use push_back()
-    threadsVect.emplace_back(utils::countWordsFromFile, fileNameVector[i],
-                             path::intermediate_dir(foldersInfo),
-                             std::ref(wordCounts));
-  }
-
-  // Wait for all threads to complete
-  for (auto &thread : threadsVect) {
-    thread.join();
-  }
-
-  // Generate the output file name
-  std::string outputFileName = "out-" + std::to_string(indexReducer) + ".txt";
-
-  // Create the full path for the output file
-  std::filesystem::path outputFilePath =
-      path::output_dir(foldersInfo) / outputFileName;
-
-  // Write the resulting map to the output file
-  std::ofstream outputFile(outputFilePath);
-  if (outputFile.is_open()) {
-    for (const auto &pair : wordCounts) {
-      outputFile << pair.first << ": " << pair.second << std::endl;
-    }
-  }
-
-  outputFile.close();
-}*/
-
 //////////////////////////////////////////////////////////////////////
 // mapper function
 /////////////////////////////////////////////////////////////////////
@@ -248,15 +210,6 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
                      ? std::thread::hardware_concurrency()
                      : config.mapperProducerInfo.M;
 
-  // launch mapper threads
-  /*std::vector<std::jthread> mapperThreads;
-   for (int n = 0; n < mappers; ++n) {
-    mapperThreads.emplace_back(MapperFunction, std::ref(inputFiles),
-                               std::cref(config), n, reducers, logger);
-  }
-  for (auto &th : mapperThreads)
-    th.join();*/
-
   ThreadPool mappers_pool(mappers);
   for (int n = 0; n < mappers; ++n) {
     mappers_pool.enqueue(
@@ -285,15 +238,6 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
       }
     }
   }
-
-  // launch reducer threads
-  /*std::vector<std::jthread> reducerThreads;
-  for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
-    reducerThreads.emplace_back(ReducerFunction, std::ref(filesForReducer[m]),
-                                std::cref(config.foldersInfo), m, logger);
-  }
-  for (auto &th : reducerThreads)
-    th.join();*/
 
   ThreadPool reducer_pool(reducers);
   for (int m = 0; m < reducers; ++m) {
