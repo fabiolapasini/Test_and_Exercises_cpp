@@ -15,7 +15,7 @@ public:
   ~ThreadPool();                 // stop via stop_source
 
   void enqueue(std::function<void()> task);
-  void waitForCompletion();
+  bool waitForCompletion(std::chrono::seconds timeout);
 
 private:
   void worker(std::stop_token stoken);
@@ -24,7 +24,7 @@ private:
   std::queue<std::function<void()>> tasks;
 
   std::mutex queueMutex;
-  std::condition_variable_any condition;
+  std::condition_variable_any condition; // avoid busy waiting
 
   // atomic boolena: so it is not affected by other threads
   std::atomic<bool> stop{false};

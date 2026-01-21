@@ -25,13 +25,14 @@ void ThreadPool::enqueue(std::function<void()> task) {
     std::lock_guard lock(queueMutex);
     tasks.push(std::move(task));
     ++tasksRemaining;
-  }
+  } // lock is automatically released (RAII)
   condition.notify_one();
 }
 
-void ThreadPool::waitForCompletion() {
+bool ThreadPool::waitForCompletion(std::chrono::seconds timeout) {
   std::unique_lock lock(queueMutex);
-  condition.wait(lock, [this] { return tasksRemaining == 0 && tasks.empty(); });
+  return condition.wait_for(
+      lock, timeout, [this] { return tasksRemaining == 0 && tasks.empty(); });
 }
 
 void ThreadPool::worker(std::stop_token stoken) {
@@ -43,7 +44,7 @@ void ThreadPool::worker(std::stop_token stoken) {
       condition.wait(lock, stoken,
                      [this] { return !tasks.empty() || stop.load(); });
 
-      if (stop && tasks.empty())
+      if (tasks.empty())
         return;
 
       task = std::move(tasks.front());
@@ -51,7 +52,10 @@ void ThreadPool::worker(std::stop_token stoken) {
     }
 
     task(); // run task
-    --tasksRemaining;
+    {
+      std::lock_guard lock(queueMutex);
+      --tasksRemaining;
+    }
 
     condition.notify_all();
   }

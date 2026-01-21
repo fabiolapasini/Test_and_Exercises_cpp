@@ -83,14 +83,6 @@ void MapperFunction(std::vector<std::string> &fileNameVector,
                    "Thread: " << indexMapper << "  deals with: " << fileName);
     }
 
-    /*vectorMutex.lock();
-    LOG4CXX_INFO(logger, "Thread: " << indexMapper << "  got the access");
-    std::string fileName = fileNameVector.back();
-    fileNameVector.pop_back();
-    LOG4CXX_INFO(logger,
-                 "Thread: " << indexMapper << "  deals with: " << fileName);
-    vectorMutex.unlock();*/
-
     int index = 0;
     int temp = 0;
     std::string alphanumericWord;
@@ -215,15 +207,13 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
     mappers_pool.enqueue(
         [&, n] { MapperFunction(inputFiles, config, n, reducers, logger); });
   }
-  mappers_pool.waitForCompletion();
+  mappers_pool.waitForCompletion(std::chrono::seconds(200));
 
   // prepare intermediate files for reducers
-  std::vector<std::vector<std::string>> filesForReducer(
-      reducers
-      /*config.mapperProducerInfo.M*/);
+  std::vector<std::vector<std::string>> filesForReducer(reducers);
   const std::string regexTemplate = R"((d)\.txt$)";
 
-  for (int m = 0; m < /*config.mapperProducerInfo.M*/ reducers; ++m) {
+  for (int m = 0; m < reducers; ++m) {
     std::string regexStr = regexTemplate;
     regexStr.replace(regexStr.find('d'), 1, std::to_string(m));
     std::regex pattern(regexStr);
@@ -245,7 +235,7 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
       ReducerFunction(filesForReducer[m], config.foldersInfo, m, logger);
     });
   }
-  reducer_pool.waitForCompletion();
+  reducer_pool.waitForCompletion(std::chrono::seconds(200));
 
   // stop the timer
   auto end = std::chrono::steady_clock::now();
