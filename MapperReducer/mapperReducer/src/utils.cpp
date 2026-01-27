@@ -5,7 +5,7 @@
 
 #include "../include/utils.h"
 
-// std::mutex mapMutex;
+std::mutex mapMutex;
 
 namespace utils {
 
@@ -54,16 +54,19 @@ bool isAlphanumeric(char c) {
 void countWordsFromFile(const std::string &filename,
                         std::filesystem::path IntermediateFiles,
                         std::unordered_map<std::string, int> &wordCounts) {
+  // build the full path using filesystem
   std::filesystem::path filePath = IntermediateFiles / filename;
 
   std::ifstream file(filePath);
-  if (!file.is_open())
-    return;
-
-  std::string word;
-  while (file >> word) {
-    ++wordCounts[word];
+  if (file.is_open()) {
+    std::string word;
+    while (file >> word) {
+      // lock the shared map
+      std::lock_guard<std::mutex> lock(mapMutex);
+      ++wordCounts[word];
+    }
   }
+  file.close();
 }
 
 } // namespace utils

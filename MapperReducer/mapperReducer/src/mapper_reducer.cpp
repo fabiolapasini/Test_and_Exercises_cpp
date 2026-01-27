@@ -3,7 +3,6 @@
 #include <regex>
 #include <thread>
 
-#include "../include/ThreadPool.h"
 #include "utils.cpp"
 
 std::mutex vectorMutex;
@@ -13,52 +12,42 @@ using namespace log4cxx::helpers;
 //////////////////////////////////////////////////////////////////////
 // reducer function
 /////////////////////////////////////////////////////////////////////
-void ReducerFunction(std::vector<std::string> fileNameVector,
-                     const utils::FoldersInfo &foldersInfo, int indexReducer,
+void ReducerFunction(std::vector<std::string> &fileNameVector,
+                     const utils::FoldersInfo foldersInfo, int indexReducer,
                      LoggerPtr logger) {
-  LOG4CXX_INFO(logger, "Reducer " << indexReducer << " starting with "
-                                  << fileNameVector.size()
-                                  << " intermediate files");
-
-  // shared map (local to this reducer)
+  // shared map
   std::unordered_map<std::string, int> wordCounts;
+  std::vector<std::thread> threadsVect;
 
-  // Process files one by one
-  for (const auto &filename : fileNameVector) {
-    // local map for this file
-    std::unordered_map<std::string, int> localCounts;
+  for (int i = 0; i < fileNameVector.size(); i++) {
+    // each of the M reducer has to read N files, I do that in parallel
+    // do not use push_back()
+    threadsVect.emplace_back(utils::countWordsFromFile, fileNameVector[i],
+                             path::intermediate_dir(foldersInfo),
+                             std::ref(wordCounts));
+  }
 
-    // Count words in the file
-    utils::countWordsFromFile(filename, path::intermediate_dir(foldersInfo),
-                              localCounts);
-
-    // Merge local counts into global map
-    for (auto &[word, count] : localCounts) {
-      wordCounts[word] += count;
-    }
+  // Wait for all threads to complete
+  for (auto &thread : threadsVect) {
+    thread.join();
   }
 
   // Generate the output file name
   std::string outputFileName = "out-" + std::to_string(indexReducer) + ".txt";
+
+  // Create the full path for the output file
   std::filesystem::path outputFilePath =
       path::output_dir(foldersInfo) / outputFileName;
 
-  LOG4CXX_INFO(logger, "Reducer " << indexReducer << " writing output: "
-                                  << outputFilePath.string());
-
   // Write the resulting map to the output file
   std::ofstream outputFile(outputFilePath);
-  if (!outputFile.is_open()) {
-    LOG4CXX_ERROR(logger,
-                  "Failed to open output file: " << outputFilePath.string());
-    return;
+  if (outputFile.is_open()) {
+    for (const auto &pair : wordCounts) {
+      outputFile << pair.first << ": " << pair.second << std::endl;
+    }
   }
 
-  for (const auto &pair : wordCounts)
-    outputFile << pair.first << ": " << pair.second << "\n";
   outputFile.close();
-
-  LOG4CXX_INFO(logger, "Reducer " << indexReducer << " completed.");
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -69,19 +58,18 @@ void MapperFunction(std::vector<std::string> &fileNameVector,
                     int reducers, LoggerPtr logger) {
   // one or more threads have to deal with more files since
   // the number of threads is less then the number of files
-  while (true) {
-    // I protect the access to the vector, only one thread at a time can pop
-    std::string fileName;
-    {
-      std::lock_guard<std::mutex> lock(vectorMutex);
-      if (fileNameVector.empty())
-        break;
-      LOG4CXX_INFO(logger, "Thread: " << indexMapper << "  got the access");
-      fileName = fileNameVector.back();
-      fileNameVector.pop_back();
-      LOG4CXX_INFO(logger,
-                   "Thread: " << indexMapper << "  deals with: " << fileName);
-    }
+  while (fileNameVector.size() > 0) {
+    // I protect the access to the vector, only one thread at a time can do
+    // pop()
+    vectorMutex.lock();
+
+    LOG4CXX_INFO(logger, "Thread: " << indexMapper << "  got the access");
+    std::string fileName = fileNameVector.back();
+    fileNameVector.pop_back();
+    LOG4CXX_INFO(logger,
+                 "Thread: " << indexMapper << "  deals with: " << fileName);
+
+    vectorMutex.unlock();
 
     int index = 0;
     int temp = 0;
@@ -194,26 +182,30 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
     }
   }
 
-  // number of thread based on concurrency
-  int mappers = std::thread::hardware_concurrency() > 0
-                    ? std::thread::hardware_concurrency()
-                    : config.mapperProducerInfo.N;
-  int reducers = std::thread::hardware_concurrency() > 0
-                     ? std::thread::hardware_concurrency()
-                     : config.mapperProducerInfo.M;
+  //// number of thread based on concurrency
+  // int mappers = std::thread::hardware_concurrency() > 0
+  //                   ? std::thread::hardware_concurrency()
+  //                   : config.mapperProducerInfo.N;
+  // int reducers = std::thread::hardware_concurrency() > 0
+  //                    ? std::thread::hardware_concurrency()
+  //                    : config.mapperProducerInfo.M;
 
-  ThreadPool mappers_pool(mappers);
-  for (int n = 0; n < mappers; ++n) {
-    mappers_pool.enqueue(
-        [&, n] { MapperFunction(inputFiles, config, n, reducers, logger); });
+  // launch mapper threads
+  std::vector<std::thread> mapperThreads;
+  for (int n = 0; n < config.mapperProducerInfo.N; ++n) {
+    mapperThreads.emplace_back(MapperFunction, std::ref(inputFiles),
+                               std::cref(config), n,
+                               config.mapperProducerInfo.M, logger);
   }
-  mappers_pool.waitForCompletion(std::chrono::seconds(200));
+  for (auto &th : mapperThreads)
+    th.join();
 
   // prepare intermediate files for reducers
-  std::vector<std::vector<std::string>> filesForReducer(reducers);
+  std::vector<std::vector<std::string>> filesForReducer(
+      config.mapperProducerInfo.M);
   const std::string regexTemplate = R"((d)\.txt$)";
 
-  for (int m = 0; m < reducers; ++m) {
+  for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
     std::string regexStr = regexTemplate;
     regexStr.replace(regexStr.find('d'), 1, std::to_string(m));
     std::regex pattern(regexStr);
@@ -229,13 +221,14 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
     }
   }
 
-  ThreadPool reducer_pool(reducers);
-  for (int m = 0; m < reducers; ++m) {
-    reducer_pool.enqueue([&, m] {
-      ReducerFunction(filesForReducer[m], config.foldersInfo, m, logger);
-    });
+  // launch reducer threads
+  std::vector<std::thread> reducerThreads;
+  for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
+    reducerThreads.emplace_back(ReducerFunction, std::ref(filesForReducer[m]),
+                                std::cref(config.foldersInfo), m, logger);
   }
-  reducer_pool.waitForCompletion(std::chrono::seconds(200));
+  for (auto &th : reducerThreads)
+    th.join();
 
   // stop the timer
   auto end = std::chrono::steady_clock::now();
