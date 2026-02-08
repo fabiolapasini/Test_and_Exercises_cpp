@@ -7,7 +7,7 @@
 
 #include "utils.h"
 
-void ReducerFunction(std::vector<std::string> &fileNameVector,
+void ReducerFunction(std::vector<std::string> fileNameVector,
                      const utils::FoldersInfo foldersInfo, int indexReducer,
                      LoggerPtr logger);
 

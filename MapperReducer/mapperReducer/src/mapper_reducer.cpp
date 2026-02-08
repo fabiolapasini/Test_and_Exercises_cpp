@@ -3,6 +3,7 @@
 #include <regex>
 #include <thread>
 
+#include "../include/Threadpool.h"
 #include "utils.cpp"
 
 std::mutex vectorMutex;
@@ -12,24 +13,34 @@ using namespace log4cxx::helpers;
 //////////////////////////////////////////////////////////////////////
 // reducer function
 /////////////////////////////////////////////////////////////////////
-void ReducerFunction(std::vector<std::string> &fileNameVector,
+void ReducerFunction(std::vector<std::string> fileNameVector,
                      const utils::FoldersInfo foldersInfo, int indexReducer,
                      LoggerPtr logger) {
   // shared map
   std::unordered_map<std::string, int> wordCounts;
   std::vector<std::thread> threadsVect;
 
-  for (int i = 0; i < fileNameVector.size(); i++) {
-    // each of the M reducer has to read N files, I do that in parallel
-    // do not use push_back()
+  /* for (int i = 0; i < fileNameVector.size(); i++) {
+  // each of the M reducer has to read N files, I do that in parallel
+  // do not use push_back()
     threadsVect.emplace_back(utils::countWordsFromFile, fileNameVector[i],
                              path::intermediate_dir(foldersInfo),
                              std::ref(wordCounts));
   }
-
   // Wait for all threads to complete
   for (auto &thread : threadsVect) {
     thread.join();
+  }*/
+
+  {
+    ThreadPool file_reader_pool(fileNameVector.size());
+    for (int i = 0; i < fileNameVector.size(); i++) {
+      auto current_file = fileNameVector[i];
+      file_reader_pool.enqueue([current_file, &wordCounts, foldersInfo] {
+        utils::countWordsFromFile(
+            current_file, path::intermediate_dir(foldersInfo), wordCounts);
+      });
+    }
   }
 
   // Generate the output file name
@@ -190,15 +201,27 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
   //                    ? std::thread::hardware_concurrency()
   //                    : config.mapperProducerInfo.M;
 
+  {
+    ThreadPool mapper_pool(config.mapperProducerInfo.N);
+    for (int n = 0; n < config.mapperProducerInfo.N; ++n) {
+      mapper_pool.enqueue([n, &inputFiles, &logger, &config] {
+        MapperFunction(std::ref(inputFiles), std::cref(config), n,
+                       config.mapperProducerInfo.M, logger);
+      });
+    }
+  }
+
+  // Wait until the end - join
+
   // launch mapper threads
-  std::vector<std::thread> mapperThreads;
+  /* std::vector<std::thread> mapperThreads;
   for (int n = 0; n < config.mapperProducerInfo.N; ++n) {
     mapperThreads.emplace_back(MapperFunction, std::ref(inputFiles),
                                std::cref(config), n,
                                config.mapperProducerInfo.M, logger);
   }
-  for (auto &th : mapperThreads)
-    th.join();
+  for (auto &th : mapperThreads) th.join();
+  */
 
   // prepare intermediate files for reducers
   std::vector<std::vector<std::string>> filesForReducer(
@@ -222,13 +245,23 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
   }
 
   // launch reducer threads
-  std::vector<std::thread> reducerThreads;
-  for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
-    reducerThreads.emplace_back(ReducerFunction, std::ref(filesForReducer[m]),
-                                std::cref(config.foldersInfo), m, logger);
+  // std::vector<std::thread> reducerThreads;
+  // for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
+  //  reducerThreads.emplace_back(ReducerFunction, std::ref(filesForReducer[m]),
+  //                              std::cref(config.foldersInfo), m, logger);
+  //}
+  // for (auto &th : reducerThreads)
+  //  th.join();
+
+  {
+    ThreadPool reducer_pool(config.mapperProducerInfo.M);
+    for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
+      auto current_file = filesForReducer[m];
+      reducer_pool.enqueue([current_file, config, m, logger] {
+        ReducerFunction(current_file, std::cref(config.foldersInfo), m, logger);
+      });
+    }
   }
-  for (auto &th : reducerThreads)
-    th.join();
 
   // stop the timer
   auto end = std::chrono::steady_clock::now();
