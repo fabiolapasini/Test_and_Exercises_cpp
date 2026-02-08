@@ -23,10 +23,9 @@ void ReducerFunction(std::vector<std::string> fileNameVector,
   {
     ThreadPool file_reader_pool(fileNameVector.size());
     for (int i = 0; i < fileNameVector.size(); i++) {
-      auto current_file = fileNameVector[i];
-      file_reader_pool.enqueue([current_file, &wordCounts, foldersInfo] {
+      file_reader_pool.enqueue([&fileNameVector, &wordCounts, foldersInfo, i] {
         utils::countWordsFromFile(
-            current_file, path::intermediate_dir(foldersInfo), wordCounts);
+            fileNameVector[i], path::intermediate_dir(foldersInfo), wordCounts);
       });
     }
   }
@@ -184,7 +183,7 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
   {
     ThreadPool mapper_pool(config.mapperProducerInfo.N);
     for (int n = 0; n < config.mapperProducerInfo.N; ++n) {
-      mapper_pool.enqueue([n, &inputFiles, &logger, &config] {
+      mapper_pool.enqueue([n, &inputFiles, logger, &config] {
         MapperFunction(std::ref(inputFiles), std::cref(config), n,
                        config.mapperProducerInfo.M, logger);
       });
@@ -213,12 +212,16 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
     }
   }
 
+  /*
+  NOTE: removed dangling reference
+  */
+
   {
     ThreadPool reducer_pool(config.mapperProducerInfo.M);
     for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
-      auto current_file = filesForReducer[m];
-      reducer_pool.enqueue([current_file, config, m, logger] {
-        ReducerFunction(current_file, std::cref(config.foldersInfo), m, logger);
+      reducer_pool.enqueue([&filesForReducer, config, m, logger] {
+        ReducerFunction(filesForReducer[m], std::cref(config.foldersInfo), m,
+                        logger);
       });
     }
   }
