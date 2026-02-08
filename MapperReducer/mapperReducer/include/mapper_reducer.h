@@ -7,8 +7,8 @@
 
 #include "utils.h"
 
-void ReducerFunction(std::vector<std::string> fileNameVector,
-                     const utils::FoldersInfo foldersInfo, int indexReducer,
+void ReducerFunction(std::vector<std::string> &fileNameVector,
+                     const utils::FoldersInfo &foldersInfo, int indexReducer,
                      LoggerPtr logger);
 
 void MapperFunction(std::vector<std::string> &fileNameVector,

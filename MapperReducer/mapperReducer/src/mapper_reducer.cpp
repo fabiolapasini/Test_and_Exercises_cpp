@@ -13,8 +13,8 @@ using namespace log4cxx::helpers;
 //////////////////////////////////////////////////////////////////////
 // reducer function
 /////////////////////////////////////////////////////////////////////
-void ReducerFunction(std::vector<std::string> fileNameVector,
-                     const utils::FoldersInfo foldersInfo, int indexReducer,
+void ReducerFunction(std::vector<std::string> &fileNameVector,
+                     const utils::FoldersInfo &foldersInfo, int indexReducer,
                      LoggerPtr logger) {
   // shared map
   std::unordered_map<std::string, int> wordCounts;
@@ -23,9 +23,10 @@ void ReducerFunction(std::vector<std::string> fileNameVector,
   {
     ThreadPool file_reader_pool(fileNameVector.size());
     for (int i = 0; i < fileNameVector.size(); i++) {
-      file_reader_pool.enqueue([&fileNameVector, &wordCounts, foldersInfo, i] {
+      auto currentFile = fileNameVector[i];
+      file_reader_pool.enqueue([currentFile, &wordCounts, &foldersInfo] {
         utils::countWordsFromFile(
-            fileNameVector[i], path::intermediate_dir(foldersInfo), wordCounts);
+            currentFile, path::intermediate_dir(foldersInfo), wordCounts);
       });
     }
   }
