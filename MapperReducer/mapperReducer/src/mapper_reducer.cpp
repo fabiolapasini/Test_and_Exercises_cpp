@@ -20,18 +20,6 @@ void ReducerFunction(std::vector<std::string> fileNameVector,
   std::unordered_map<std::string, int> wordCounts;
   std::vector<std::thread> threadsVect;
 
-  /* for (int i = 0; i < fileNameVector.size(); i++) {
-  // each of the M reducer has to read N files, I do that in parallel
-  // do not use push_back()
-    threadsVect.emplace_back(utils::countWordsFromFile, fileNameVector[i],
-                             path::intermediate_dir(foldersInfo),
-                             std::ref(wordCounts));
-  }
-  // Wait for all threads to complete
-  for (auto &thread : threadsVect) {
-    thread.join();
-  }*/
-
   {
     ThreadPool file_reader_pool(fileNameVector.size());
     for (int i = 0; i < fileNameVector.size(); i++) {
@@ -193,14 +181,6 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
     }
   }
 
-  //// number of thread based on concurrency
-  // int mappers = std::thread::hardware_concurrency() > 0
-  //                   ? std::thread::hardware_concurrency()
-  //                   : config.mapperProducerInfo.N;
-  // int reducers = std::thread::hardware_concurrency() > 0
-  //                    ? std::thread::hardware_concurrency()
-  //                    : config.mapperProducerInfo.M;
-
   {
     ThreadPool mapper_pool(config.mapperProducerInfo.N);
     for (int n = 0; n < config.mapperProducerInfo.N; ++n) {
@@ -209,19 +189,8 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
                        config.mapperProducerInfo.M, logger);
       });
     }
-  }
-
-  // Wait until the end - join
-
-  // launch mapper threads
-  /* std::vector<std::thread> mapperThreads;
-  for (int n = 0; n < config.mapperProducerInfo.N; ++n) {
-    mapperThreads.emplace_back(MapperFunction, std::ref(inputFiles),
-                               std::cref(config), n,
-                               config.mapperProducerInfo.M, logger);
-  }
-  for (auto &th : mapperThreads) th.join();
-  */
+  } // Wait until the end of all threads:
+  // al intermediate file mr-X-Y.txt written
 
   // prepare intermediate files for reducers
   std::vector<std::vector<std::string>> filesForReducer(
@@ -243,15 +212,6 @@ int runProgram(LoggerPtr logger, const utils::Configuration &config) {
       }
     }
   }
-
-  // launch reducer threads
-  // std::vector<std::thread> reducerThreads;
-  // for (int m = 0; m < config.mapperProducerInfo.M; ++m) {
-  //  reducerThreads.emplace_back(ReducerFunction, std::ref(filesForReducer[m]),
-  //                              std::cref(config.foldersInfo), m, logger);
-  //}
-  // for (auto &th : reducerThreads)
-  //  th.join();
 
   {
     ThreadPool reducer_pool(config.mapperProducerInfo.M);
